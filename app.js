@@ -1,14 +1,14 @@
 // Classe que cria o objeto de despesa
 class Expense
 {
-    constructor(ano, mes, dia, tipo, descricao, valor)
+    constructor(year, month, day, type, description, val)
     {
-        this.ano = ano
-        this.mes = mes
-        this.dia = dia
-        this.tipo = tipo
-        this.descricao = descricao
-        this.valor = valor
+        this.year = year
+        this.month = month
+        this.day = day
+        this.type = type
+        this.description = description
+        this.val = val
     }
 
     validateData()
@@ -71,11 +71,68 @@ class Db
                 continue
             }
 
+            expense.id = i
+
             expenses.push(expense)
         }
 
         return expenses
     }
+
+    // Metodo de pesquisar dentro do DB, ele ira retornar um dado para a função abaixo >searchForExpense
+    search(expense)
+    {
+        // Cria um array com todos os items primariamente
+        let expensesFiltered = Array()
+        // Recebe todas as despesas para poder filtrar
+        expensesFiltered = this.loadAllExpenses()
+
+        // O filtro será feito por ordem
+
+        // Ano
+        if(expense.year != '')
+        {
+            expensesFiltered = expensesFiltered.filter(d => d.year == expense.year)
+        }
+
+        // Mes
+        if(expense.month != '')
+        {
+            expensesFiltered = expensesFiltered.filter(d => d.month == expense.month)
+        }
+
+        // Dia
+        if(expense.day != '')
+        {
+            expensesFiltered = expensesFiltered.filter(d => d.day == expense.day)
+        }
+
+        // Tipo
+        if(expense.type != '')
+        {
+            expensesFiltered = expensesFiltered.filter(d => d.type == expense.type)
+        }
+
+        // Descrição
+        if(expense.description != '')
+        {
+            expensesFiltered = expensesFiltered.filter(d => d.description == expense.description)
+        }
+
+        // Valor
+        if(expense.val != '')
+        {
+            expensesFiltered = expensesFiltered.filter(d => d.val == expense.val)
+        }
+
+        return expensesFiltered
+    }
+
+    remove(id)
+    {
+        localStorage.removeItem(id)
+    }
+
 }
 
 let db = new Db()
@@ -83,32 +140,41 @@ let db = new Db()
 // função desencadeada apos o usuario clicar em +
 function registerNewExpense()
 {
-    let ano =document.getElementById('ano')
-    let mes =document.getElementById('mes')
-    let dia =document.getElementById('dia')
-    let tipo =document.getElementById('tipo')
-    let descricao =document.getElementById('descricao')
-    let valor =document.getElementById('valor')
+    let year = document.getElementById('ano')
+    let month = document.getElementById('mes')
+    let day = document.getElementById('dia')
+    let type = document.getElementById('tipo')
+    let description = document.getElementById('descricao')
+    let val = document.getElementById('valor')
 
     let expense = new Expense
     (
-        ano.value,
-        mes.value,
-        dia.value,
-        tipo.value,
-        descricao.value,
-        valor.value,
+        year.value,
+        month.value,
+        day.value,
+        type.value,
+        description.value,
+        val.value,
     )
 
     // Sistema de persistencia de arquivo no DB do navegador
 
+    // Caso de certo a persistencia de dados
     if(expense.validateData())
     {
         // Comando JQuery para aparecer o Modal
         $('#sucessDbSave').modal('show')
 
         db.inputToDB(expense)
+
+        // year.value = ''
+        // month.value = ''
+        // day.value = ''
+        type.value = ''
+        description.value = ''
+        val.value = ''
     }
+    // Caso haja alguma incogruencia
     else
     {
         // Comando JQuery para aparecer o Modal
@@ -120,15 +186,17 @@ function registerNewExpense()
 }
 
 // Funcao responsavel por carregar a lista
-function loadExpensesList()
+function loadExpensesList(expense = Array(), filter = false)
 {
-    let expenses = Array() 
-    expenses = db.loadAllExpenses()
+    if(expense.length == 0 && filter == false)
+    {
+        expense = db.loadAllExpenses()
+    }
 
     // console.log(expenses)
-
+   
     // Pega o ID da tabela e começa a configurar ela
-    var expenseList = document.getElementById("expenseList")
+    let expenseList = document.getElementById("expenseList")
     
     // <tr>
     // <td>18/05/2020</td>
@@ -136,27 +204,78 @@ function loadExpensesList()
     // <td>Ifood</td>
     // <td>10.75</td>
     // </tr>
-
-    expenses.forEach(function(e)
+    expenseList.innerHTML = ''
+    expense.forEach(function(e)
     {
         // Cria o TR
         let line = expenseList.insertRow()
 
         // Cria os TD
-        line.insertCell(0).innerHTML = `${e.dia} / ${e.mes} / ${e.ano} `
+        line.insertCell(0).innerHTML = `${e.day} / ${e.month} / ${e.year} `
         // Ajustar o tipo
-        switch(e.tipo)
+        let tempChar = ''
+
+        switch(e.type)
         {
-            case 1: 'Alimentação'
-            case 2: 'Educação'
-            case 3: 'Lazer'
-            case 4: 'Saúde'
-            case 5: 'Transporte'
+            case '1': 
+                tempChar = 'Alimentação'
+                break;
+            case '2': 
+                tempChar = 'Educação'
+                break;
+            case '3': 
+                tempChar = 'Lazer'
+                break;
+            case '4': 
+                tempChar = 'Saúde'
+                break;
+            case '5': 
+                tempChar = 'Transporte'
+                break;
+            default:
+                alert("Ha algo de errado")
+                break;
         }
 
-        line.insertCell(1)
-        line.insertCell(2)
-        line.insertCell(3)
+        line.insertCell(1).innerHTML = tempChar
+        line.insertCell(2).innerHTML = e.description
+        line.insertCell(3).innerHTML = e.val
+
+        //Criar o botão de exclusão
+		let btn = document.createElement('button')
+		btn.className = 'btn btn-danger'
+		btn.innerHTML = '<i class="fa fa-times"  ></i>'
+		btn.id = `id_despesa_${e.id}`
+		btn.onclick = function(){
+			let id = this.id.replace('id_despesa_','')
+
+			db.remove(id)
+			window.location.reload()
+		}
+		line.insertCell(4).append(btn)
     })
+}
+
+// Faz a pesquisa de despesas correlacionadas com a busca
+function searchForExpense()
+{
+    // alert("busca concluida")
+    // Pega os elementos preenchidos na pagina
+    let year = document.getElementById('ano').value
+    let month = document.getElementById('mes').value
+    let day = document.getElementById('dia').value
+    let type = document.getElementById('tipo').value
+    let description = document.getElementById('descricao').value
+    let val = document.getElementById('valor').value
+
+    // Criação do objeto de pesquisa
+    let expense = new Expense(year, month, day, type, description, val)
+    // Debugger
+    // console.log(expense)
+
+    // O metodo pesquisa via adentrar no banco de dados, na função acima (BD) e recuperar os dados ja persistidos
+    let expenseSearch = db.search(expense)
+
+    this.loadExpensesList(expenseSearch, true)
 }
 
